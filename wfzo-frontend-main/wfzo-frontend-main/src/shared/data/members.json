@@ -1,0 +1,130 @@
+[
+ {
+    "id": 1,
+    "name": "DIEZ",
+    "logo": "/assets/featured/DIEZ_Brandmark Artwork_RGB_Stacked_Bilingual.png",
+    "flag": "AE",
+    "industries": ["Logistics", "Real Estate"],
+    "continent": "Asia"
+  },
+  {
+    "id": 2,
+    "name": "Poti Free Industrial Zone",
+    "logo": "/assets/featured/Poti_FIZ.png",
+    "flag": "GE",
+    "industries": ["Trade", "Logistics"],
+    "continent": "Europe"
+  },
+  {
+    "id": 3,
+    "name": "ZETA Group",
+    "logo": "/assets/featured/Zgroup.png",
+    "flag": "CR",
+    "industries": ["Industrial Development", "Real Estate"],
+    "continent": "South America"
+  },
+  {
+    "id": 4,
+    "name": "NavoiFEZ",
+    "logo": "/assets/featured/NavoiFEZ-Logo.png",
+    "flag": "UZ",
+    "industries": ["Manufacturing"],
+    "continent": "Asia"
+  },
+  {
+    "id": 5,
+    "name": "Consorci de la Zona Franca de Barcelona",
+    "logo": "/assets/featured/Consorci_de_la_Barcelona.jpg",
+    "flag": "ES",
+    "industries": [],
+    "continent": "Europe"
+  },
+  {
+    "id": 6,
+    "name": "ZOFRAVILLA S.A",
+    "logo": "/assets/featured/ZOFRAVILLA_S.A.jpg",
+    "flag": "AR",
+    "industries": [],
+    "continent": "South America"
+  },
+   {
+    "id": 7,
+    "name": "GREAT STONE industrial park",
+    "logo": "/assets/featured/GreatStoneIndustrialPark.jpg",
+    "flag": "BY",
+    "industries": ["Industrial Development"],
+    "continent": "Europe"
+  },
+  {
+    "id": 8,
+    "name": "KAZAKISTAN Special Free Economic Zones Association",
+    "logo": "/assets/featured/KAZAKISTANSPECIALFREEECONOMICZONESASSOCIATION.png",
+    "flag": "KZ",
+    "industries": [],
+    "continent": "Asia"
+  },
+  {
+    "id": 9,
+    "name": "Anzali Free Zone Organization",
+    "logo": "/assets/featured/AnzaliFreeZoneOrganization.jpg",
+    "flag": "IR",
+    "industries": [],
+    "continent": "Asia"
+  },
+  {
+    "id": 10,
+    "name": "China(Hunan)Pilot Free Trade Zone",
+    "logo": "/assets/featured/China(Hunan)PilotFreeTradeZone.jpg",
+    "flag": "CN",
+    "industries": [],
+    "continent": "Asia"
+  },
+  {
+    "id": 11,
+    "name": "Zona Económica Especial Luanda | Bengo Special Economic Zone",
+    "logo": "/assets/featured/ZEE.jpg",
+    "flag": "AO",
+    "industries": ["Industrial development", "Real Estate"],
+    "continent": "Africa"
+  },
+  {
+    "id": 12,
+    "name": "MAEKONG INSTITUTE",
+    "logo": "/assets/featured/MekongInstitute.png",
+    "flag": "TH",
+    "industries": [],
+    "continent": "Asia"
+  },
+  {
+    "id": 13,
+    "name": "Suez Canal Economic Zone",
+    "logo": "/assets/featured/suez-canal-economic-zone.png",
+    "flag": "EG",
+    "industries": [],
+    "continent": "Africa"
+  },
+  {
+    "id": 14,
+    "name": "MYLER FREE ECONOMIC ZONE",
+    "logo": "/assets/featured/MylerFreeEconomicZone.png",
+    "flag": "AM",
+    "industries": [],
+    "continent": "Asia"
+  },
+  {
+    "id": 15,
+    "name": "Codevi",
+    "logo": "/assets/featured/Codevi.png",
+    "flag": "HT",
+    "industries": [],
+    "continent": "North America"
+  },
+  {
+    "id": 16,
+    "name": "Phoenix",
+    "logo": "/assets/featured/Phoenix.jpg",
+    "flag": "IN",
+    "industries": [],
+    "continent": "Asia"
+  }
+]

@@ -1,0 +1,3564 @@
+openapi: 3.0.4
+info:
+  title: WFZO Website Management Platform API
+  description: >-
+    REST APIs for the World Free Zones Organization (WFZO) web platform.
+    Scopes
+     - Auth: Microsoft Entra (External ID) Bearer JWT
+     - Content: read-through to Strapi CMS
+     - Documents: secure PDF delivery via short-lived Azure Blob SAS
+     - Events: Zoom registration with per-membership seat quotas
+     - Learning: LMS integration with Moodle
+     - Community: Discourse integrations (DMs, topics, embeds)
+     - CMS APIs
+  version: 1.0.0
+servers:
+  - url: /wfzo/api/v1
+tags:
+  - name: User
+    description:
+      Endpoints for user profiles and activities. A Member can be an organization with Primary and Secondary users under it. Primary users control major
+      features based on membership type, while Secondary users have limited capabilities. User can be of type Internal(WFZO staff) or External(Members). News letter
+      subscribed email is considered in this because he is a potential user. User profile includes personal details, preferences, and activity logs. User authentication
+      for the external users will be using Microsoft Entra ID (Azure AD B2C). For Internal users we will use basic jwt token based authentication. and passwords will be
+      managed with in the system.
+  - name: Member
+    description:
+      Member directory and profiles. Includes search (by industry, initial letter, free text), featured members, partners/sponsors, registration, industries
+      list, and access controls. Supports multi-user memberships with Primary and Secondary users. It is a multi-tenant system where each member is a tenant. There can
+      be Primary and sub-users under a tenant.
+  - name: Membership
+    description:
+      Membership types, features, and rules used for access control. Includes membership creation, updates, and feature entitlements.
+      Supports multi-tier memberships with varying access levels. The Membership module defines different membership plans (Basic, Premium, Corporate, etc.) with
+      associated features and quotas. It manages member features access based on their membership type.
+  - name: Learning
+    description: E-learning endpoints for courses, registrations, access URLs, and certificates.
+  - name: CMS
+    description: Read-through endpoints for Strapi CMS content. Content is cached via ISR with TTL and supports tag-based revalidation.
+  - name: Master Data
+    description:
+      Master data for pages and forms (countries, categories, tiers, query types, etc.). Managed in admin, localized via Strapi. Cached via ISR with TTL and
+      revalidation.
+  - name: Networking
+    description: Social and networking capabilities for members (future scope).
+  - name: Document Management
+    description: Secure document upload and time-limited download delivery.
+  - name: Events
+    description: Event registration, seat/quota management, and retrieval.
+  - name: Contact Us
+    description: Submit and process "Contact Us" requests from the website.
+  - name: Cross Cutting
+    description: Cross cutting functionalities and utilities used across multiple modules.
+  - name: Admin
+    description: WFZO internal user management and administration endpoints.
+  - name: MailerLite
+    description: MailerLite email marketing integration for subscriber management.
+paths:
+  /user:
+    post:
+      tags:
+        - User
+      summary: Create a new user profile
+      description:
+        Create a new user profile; supports basic registration and full onboarding. Different use cases
+        - News letter subscription only (at this point grab the email and name(optional))
+        - Internal User (WFZO staff) will have the password stored in the system (hashed) and will be able to login
+        - External User (Member user(Primary and Secondary)) will not have the password till they complete the onboarding process and they are approved
+        by the Committee. The password will be stored in the external IDP (Microsoft Entra ID). For external user the User profile
+        is subset of the member profile. This service might be invoked directly from the UI for news letter subscription or via internal admin tool for
+        creating internal users or via onboarding service(member creation) for creating external users.
+      operationId: createUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/User"
+      responses:
+        "200":
+          description: successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          description: Invalid input
+        "422":
+          description: Validation exception
+        default:
+          description: Unexpected error
+    get:
+      tags:
+        - User
+      summary: Search users
+      description:
+        Search users by username (supports partial match), user type, and membership type. This search might
+        be used by the internal admin users or in case the member wants to add sub users whose email is already registered in the system.
+      operationId: searchUser
+      parameters:
+        - name: username
+          in: query
+          description: Filter by username (partial match supported)
+          required: false
+          schema:
+            type: string
+        - name: userType
+          in: query
+          schema:
+            $ref: "#/components/schemas/UserTypeList"
+        - name: membershipType
+          in: query
+          description: To get the list of users matching the membership type (Membership type is a master data)
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSearchResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+              examples:
+                ERR001:
+                  value:
+                    code: "ERR001"
+                    type: "FAILURE"
+                    message: "{fieldName} enter a valid value"
+                ERR002:
+                  value:
+                    code: "ERR002"
+                    type: "FAILURE"
+                    message: "User Not found"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+              example:
+                code: "GEN001"
+                type: "FAILURE"
+                message: "Internal Server Error"
+  /user/profile/{username}:
+    put:
+      tags:
+        - User
+      summary: Update details in a user profile
+      description:
+        Update the profile fields for a user. Applies to users at any onboarding state. Individual users who are tied to a membership
+        can update their own profile.
+      operationId: userProfileUpdate
+      parameters:
+        - name: username
+          in: path
+          description: username of the user profile to be updated
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/User"
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+              example:
+                code: "SUCCESS001"
+                type: "SUCCESS"
+                message: "Successfully updated the profile data"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+              examples:
+                ERR003:
+                  value:
+                    code: "ERR003"
+                    type: "FAILURE"
+                    message: "Mandatory field Missing {fieldName}"
+                ERR004:
+                  value:
+                    code: "ERR004"
+                    type: "FAILURE"
+                    message: "User Not found"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+              example:
+                code: "GEN001"
+                type: "FAILURE"
+                message: "Internal Server Error"
+    delete:
+      tags:
+        - User
+      summary: Delete a user profile
+      description:
+        Delete the user profile for the specified username. This action is irreversible. Primary user can
+        remove sub users under their membership. Admin can remove the user profiles. Primary user can deleted by Admin(need to check)
+      operationId: deleteUserProfile
+      parameters:
+        - name: username
+          in: path
+          description: username of the user profile to be deleted
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: User profile deleted successfully
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+              examples:
+                ERR004:
+                  value:
+                    code: "ERR004"
+                    type: "FAILURE"
+                    message: "User Not found"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+              example:
+                code: "GEN001"
+                type: "FAILURE"
+                message: "Internal Server Error"
+  /user/access/{username}:
+    get:
+      tags:
+        - User
+      summary: User Role based access
+      description:
+        Return entitlements (RBAC, quotas, paywalled features) for the user based on their membership.
+        Supports multi-tier and multi-user memberships. It would have the remaining quota details for each feature with which UI
+        can restrict user access
+      operationId: getUserAccess
+      parameters:
+        - name: username
+          in: path
+          description: User name of the logged in user
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: RBAC/entitlements for the current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserAccess"
+              examples:
+                zoneBasic:
+                  value:
+                    membershipId: "sdvdsv322-9b0a-4d93-a9e4-332fdddd4444"
+                    user:
+                      id: "a4f2f66c-9b0a-4d93-a9e4-3d2f3e6e8a77"
+                      username: "jane@company.com"
+                    entitlements:
+                      library:
+                        access: "restricted"
+                        quota:
+                          kind: "documents"
+                          limit: 3
+                          used: 1
+                          remaining: 2
+                          window: "day"
+                          resetsAt: "2025-09-24T00:00:00Z"
+                      webinars.wfzo:
+                        access: "unlimited"
+                        quota:
+                          kind: "seats"
+                          limit: 1
+                          used: 0
+                          remaining: 1
+                          window: "event"
+                      members.featuredView:
+                        access: "payment"
+                        monetary:
+                          paymentRequired: true
+                          discountAvailable: true
+                          discountType: "percentage"
+                          discountValue: 20
+                    generatedAt: "2025-09-23T08:30:00Z"
+        "400":
+          description: Invalid ID supplied
+        "404":
+          description: Order not found
+        default:
+          description: Unexpected error
+  /member:
+    post:
+      tags:
+        - Member
+      summary: Create a new member
+      description: Create a new member record; supports basic registration and full onboarding.
+      operationId: registration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberInfo"
+      responses:
+        "200":
+          description: successful operation need to respond the memberId
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          description: Invalid input
+        "422":
+          description: Validation exception
+        default:
+          description: Unexpected error
+  /member/me:
+    post:
+      tags:
+        - Member
+      summary: Get member details by email
+      description: Retrieve member information using the user's email address.
+      operationId: getMemberByEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: User email address to find the member
+                  example: "john.doe@example.com"
+      responses:
+        "200":
+          description: Member details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberInfo"
+        "400":
+          description: Invalid input
+        "404":
+          description: Member not found
+        default:
+          description: Unexpected error
+    get:
+      tags:
+        - Member
+      summary: Search members
+      description: Search members by various filters (e.g., featured, country, industry, starting letter, free text). Supports pagination.
+      operationId: getMembers
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberSearchResponse"
+        "400":
+          description: Invalid ID supplied
+        "404":
+          description: Order not found
+        default:
+          description: Unexpected error
+  /member/activity:
+    patch:
+      tags:
+        - Member
+      summary: Log Member activity
+      description: Record a member's feature usage (e.g., a click). The backend increments usage and responds with the latest count for that feature.
+      operationId: logMemberActivity
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberActivity"
+            examples:
+              Library Download:
+                summary: Member downloaded a library document; server will increment the count
+                value:
+                  memberId: "a4f2f66c-9b0a-4d93-a9e4-3d2f3e6e8a77"
+                  featureKey: "members.libraryDownloads"
+                  timestamp: "2025-10-10T10:15:30Z"
+              Member News Access:
+                summary: Member accessed a Member News; server will increment the count
+                value:
+                  memberId: "a4f2f66c-9b0a-4d93-a9e4-3d2f3e6e8a77"
+                  featureKey: "members.newsAccess"
+                  timestamp: "2025-10-10T10:15:30Z"
+      responses:
+        "200":
+          description: Activity logged successfully; returns the latest usage count after update
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberActivity"
+              examples:
+                Library Download increment:
+                  summary: Latest count after increment
+                  value:
+                    memberId: "a4f2f66c-9b0a-4d93-a9e4-3d2f3e6e8a77"
+                    featureKey: "members.libraryDownloads"
+                    usageCount: 11
+                    timestamp: "2025-10-10T10:15:30Z"
+                Member News Access increment:
+                  summary: Latest count after increment
+                  value:
+                    memberId: "a4f2f66c-9b0a-4d93-a9e4-3d2f3e6e8a77"
+                    featureKey: "members.newsAccess"
+                    usageCount: 11
+                    timestamp: "2025-10-10T10:15:30Z"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+              examples:
+                ERR005:
+                  value:
+                    code: "ERR005"
+                    type: "FAILURE"
+                    message: "Invalid activity data"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+              example:
+                code: "GEN001"
+                type: "FAILURE"
+                message: "Internal Server Error"
+  /member/{memberId}:
+    get:
+      tags:
+        - Member
+      summary: Get member by ID
+      description: Return the member profile and related membership information for the given member ID.
+      operationId: getMemberById
+      parameters:
+        - name: memberId
+          in: path
+          description: Unique identifier of the member
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+            application/xml:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid ID supplied
+        "404":
+          description: Order not found
+        default:
+          description: Unexpected error
+    put:
+      tags:
+        - Member
+      summary: Update member details
+      description: Update profile or membership information for the specified member.
+      operationId: memberUpdate
+      parameters:
+        - name: memberId
+          in: path
+          description: Unique identifier of the member
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/User"
+          application/xml:
+            schema:
+              $ref: "#/components/schemas/User"
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/User"
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid input
+        "422":
+          description: Validation exception
+        default:
+          description: Unexpected error
+  /member/industries:
+    get:
+      tags:
+        - Member
+      summary: List industries
+      description: Return the list of industries used for member classification and filtering.
+      operationId: getIndustries
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+              example:
+                - "Aerospace"
+                - "Agriculture"
+                - "Automotive"
+                - "Biotechnology"
+                - "Chemicals"
+        "400":
+          description: Invalid ID supplied
+        "404":
+          description: Order not found
+        default:
+          description: Unexpected error
+  /member/partnersandSponsors:
+    get:
+      tags:
+        - Member
+      summary: List partners and sponsors
+      description: Return the current list of partnering organizations and sponsors with logos and links.
+      operationId: getPartnersAndSponsors
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartnersAndSponsors"
+              example:
+                partners:
+                  - name: "Partner 1"
+                    logoUrl: "https://example.com/logos/partner1.png"
+                    websiteUrl: "https://partner1.com"
+                  - name: "Partner 2"
+                    logoUrl: "https://example.com/logos/partner2.png"
+                    websiteUrl: "https://partner2.com"
+                sponsors:
+                  - name: "Sponsor 1"
+                    logoUrl: "https://example.com/logos/sponsor1.png"
+                    websiteUrl: "https://sponsor1.com"
+                  - name: "Sponsor 2"
+                    logoUrl: "https://example.com/logos/sponsor2.png"
+                    websiteUrl: "https://sponsor2.com"
+        "400":
+          description: Invalid ID supplied
+        "404":
+          description: Order not found
+        default:
+          description: Unexpected error
+  /member/featured:
+    get:
+      tags:
+        - Member
+      summary: List featured members
+      description: Return a curated list of featured members to highlight on the site.
+      operationId: getFeaturedMembers
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FeaturedMember"
+              example:
+                - memberId: "a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6"
+                  name: "Member One"
+                  logoUrl: "https://example.com/logos/member1.png"
+                  websiteUrl: "https://memberone.com"
+                - memberId: "p0o9i8u7-y6t5-r4e3-w2q1-z0x9c8v7b6n5"
+                  name: "Member Two"
+                  logoUrl: "https://example.com/logos/member2.png"
+                  websiteUrl: "https://membertwo.com"
+        "400":
+          description: Invalid ID supplied
+        "404":
+          description: Order not found
+        default:
+          description: Unexpected error
+  /member/mapdata/{action}:
+    get:
+      tags:
+        - Member
+      summary: Get member map data
+      description: Return data for the member map. When action=view-map, return aggregate counts by continent and country. When action=view-member, return member coordinates for map markers.
+      operationId: getMemberMapData
+      parameters:
+        - name: action
+          in: path
+          description: if action is view-map then return continentMemberCount and
+            countryMemberCount. If action is view-member then return the member details with lat long
+          required: true
+          schema:
+            type: string
+            enum: ["view-map", "view-member"]
+            example: "view-map"
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MemberMapData"
+              examples:
+                view-member:
+                  summary: Response when action=view-member (company markers with coordinates)
+                  value:
+                    - companyMapData:
+                        - companyName: "Example Corp"
+                          latitude: 20.5937
+                          longitude: 78.9629
+                        - companyName: "Sample Inc"
+                          latitude: 37.7749
+                          longitude: -122.4194
+                view-map:
+                  summary: Response when action=view-map (aggregate counts by continent and country)
+                  value:
+                    - continentMemberCount:
+                        Asia: 120
+                        Europe: 80
+                        NorthAmerica: 150
+                        SouthAmerica: 60
+                        Africa: 40
+                        Australia: 30
+                      countryMemberCount:
+                        - code: "AE"
+                          value: "United Arab Emirates"
+                          count: 42
+                        - code: "IN"
+                          value: "India"
+                          count: 150
+        "400":
+          description: Invalid ID supplied
+        "404":
+          description: Order not found
+        default:
+          description: Unexpected error
+  /member/status/{memberId}/{status}:
+    put:
+      tags:
+        - Member
+      summary: Update member status
+      description: Update the membership status and related flags for the specified member ID.
+      operationId: updateMemberStatus
+      parameters:
+        - name: memberId
+          in: path
+          description: Member identifier
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: path
+          description: New membership status
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          description: Invalid input
+        "422":
+          description: Validation exception
+        default:
+          description: Unexpected error
+  /internal/user/login:
+    post:
+      tags:
+        - Admin
+      summary: Internal user login
+      description: Authenticate WFZO internal users and return a JWT for subsequent requests.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InternalLoginRequest"
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalLoginResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /internal/user:
+    get:
+      tags:
+        - Admin
+      summary: List internal users
+      description: Paginated list of WFZO internal users.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+        - name: q
+          in: query
+          required: false
+          description: Free-text search across name, email, and username
+          schema:
+            type: string
+        - name: role
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalUserListResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+    post:
+      tags:
+        - Admin
+      summary: Register a new internal user
+      description: Create an internal WFZO user. Only Admins can create users.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InternalUserCreateRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalUser"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /internal/user/{userId}:
+    get:
+      tags:
+        - Admin
+      summary: Get internal user by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalUser"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+    put:
+      tags:
+        - Admin
+      summary: Update internal user
+      description: Update profile, roles, or status of an internal user.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InternalUserUpdateRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalUser"
+    delete:
+      tags:
+        - Admin
+      summary: Delete internal user
+      description: Permanently delete an internal user. Admin only.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /internal/user/roles:
+    get:
+      tags:
+        - Admin
+      summary: List internal roles
+      description: Returns available roles for internal users.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Role"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /learning/course:
+    get:
+      tags:
+        - Learning
+      summary: List available courses
+      description: Retrieve a list of courses offered by WFZO.
+      responses:
+        "200":
+          description: Document metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /learning/registration:
+    post:
+      tags:
+        - Learning
+      summary: Register for e-learning access
+      description: Create or update a registration for LMS access for a user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/User"
+          application/xml:
+            schema:
+              $ref: "#/components/schemas/User"
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/User"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /learning/course/{courseId}:
+    get:
+      tags:
+        - Learning
+      summary: Get course by ID
+      parameters:
+        - name: courseId
+          in: path
+          description: Unique ID of the course to fetch
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Course metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /learning/course/registration/{username}:
+    post:
+      tags:
+        - Learning
+      summary: Register user to a course
+      description: Register the specified user to a given course and initialize access.
+      parameters:
+        - name: username
+          in: path
+          description: Username to register for the course
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/User"
+          application/xml:
+            schema:
+              $ref: "#/components/schemas/User"
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/User"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /learning/course/{courseId}/{username}:
+    get:
+      tags:
+        - Learning
+      summary: Get personalized course URL
+      description: Return a course-specific access URL for the user (e.g., SSO deep link to LMS).
+      parameters:
+        - name: courseId
+          in: path
+          description: Course identifier
+          required: true
+          schema:
+            type: string
+        - name: username
+          in: path
+          description: Username
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /learning/course/{courseId}/{username}/certificate:
+    get:
+      tags:
+        - Learning
+      summary: Get course completion certificate
+      description: Return a link or payload to download the user's completion certificate for the course.
+      parameters:
+        - name: courseId
+          in: path
+          description: Course identifier
+          required: true
+          schema:
+            type: string
+        - name: username
+          in: path
+          description: Username
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /events:
+    post:
+      tags:
+        - Events
+      summary: Create a Zoom-based webinar or meeting
+      description: |
+        Webhook endpoint called from Strapi CMS when a member or WFZO staff creates an online event. Automatically creates a 
+        Zoom webinar/meeting and stores meeting details. Supports per-membership quota settings for registration.
+      operationId: createEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventCreateRequest"
+            examples:
+              webinar:
+                summary: Create a webinar with per-member quotas
+                value:
+                  eventCode: "WFZO-2025-DXB"
+                  type: "webinar"
+                  title: "Innovations in Aerospace"
+                  description: "An in-depth look at the latest trends in aerospace technology."
+                  scheduledAt: "2025-11-15T14:00:00Z"
+                  durationMinutes: 60
+                  timezone: "Asia/Dubai"
+                  presenter:
+                    name: "Dr. Jane Smith"
+                    email: "jane@example.com"
+                  capacity: 500
+                  language: "en"
+                  createdBy:
+                    memberId: "a4f2f66c-9b0a-4d93-a9e4-3d2f3e6e8a77"
+                    userId: "b3e1d44a-8c9b-4f83-b7d3-4e5f6g7h8i9j"
+                  registrationSettings:
+                    requiresApproval: false
+                    registrationDeadline: "2025-11-14T23:59:59Z"
+                    allowWaitlist: true
+                    perMemberQuota:
+                      basic: 2
+                      core: 5
+                      premium: 10
+                  zoom:
+                    autoCreate: true
+                    type: "webinar"
+                    settings:
+                      hostVideo: true
+                      participantVideo: false
+                      muteUponEntry: true
+                      waitingRoom: true
+      responses:
+        "201":
+          description: Event created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventCreateResponse"
+              example:
+                id: "e8f9g0h1-i2j3-k4l5-m6n7-o8p9q0r1s2t3"
+                eventCode: "WFZO-2025-DXB"
+                status: "scheduled"
+                zoom:
+                  meetingId: "1234567890"
+                  webinarId: "9876543210"
+                  hostJoinUrl: "https://zoom.us/s/1234567890?pwd=..."
+                  registrationUrl: "https://zoom.us/webinar/register/WN_abc123"
+                createdAt: "2025-10-19T10:00:00Z"
+        "400":
+          description: Invalid input
+        "500":
+          description: Internal server error
+    get:
+      tags:
+        - Events
+      summary: List events
+      description: |
+        Search and filter events. Supports pagination, status filtering, and text search.
+        Returns events with basic details and registration statistics.
+      operationId: listEvents
+      parameters:
+        - name: status
+          in: query
+          description: Filter by event status
+          schema:
+            type: string
+            enum: [upcoming, ongoing, past, cancelled]
+        - name: type
+          in: query
+          description: Filter by event type
+          schema:
+            type: string
+            enum: [webinar, meeting]
+        - name: createdBy
+          in: query
+          description: Filter by creator member ID
+          schema:
+            type: string
+            format: uuid
+        - name: q
+          in: query
+          description: Text search across title and description
+          schema:
+            type: string
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: List of events
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventListResponse"
+        "400":
+          description: Invalid input
+  /events/{eventCode}:
+    get:
+      tags:
+        - Events
+      summary: Get event details
+      description: |
+        Get comprehensive event information including registration status,
+        available seats, and user's registration status if authenticated.
+      operationId: getEventByCode
+      parameters:
+        - name: eventCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Event details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventDetails"
+        "404":
+          description: Event not found
+    patch:
+      tags:
+        - Events
+      summary: Update event details
+      description: |
+        Update event information. Restricted to event creator or WFZO admin. Updates are synced to Zoom if applicable.
+      operationId: updateEvent
+      parameters:
+        - name: eventCode
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventUpdateRequest"
+      responses:
+        "200":
+          description: Event updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventDetails"
+        "400":
+          description: Invalid input
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden - not event creator or admin
+        "404":
+          description: Event not found
+    delete:
+      tags:
+        - Events
+      summary: Delete event
+      description: |
+        Delete an event. Only allowed for events with no registrations.
+        For events with registrations, use the cancel endpoint instead.
+      operationId: deleteEvent
+      parameters:
+        - name: eventCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Event deleted successfully
+        "400":
+          description: Cannot delete event with registrations
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Event not found
+  /events/{eventCode}/cancel:
+    post:
+      tags:
+        - Events
+      summary: Cancel an event
+      description: |
+        Cancel an event and optionally notify all registered attendees.
+        Updates Zoom meeting/webinar status and marks all registrations as cancelled.
+      operationId: cancelEvent
+      parameters:
+        - name: eventCode
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  description: Reason for cancellation
+                notifyAttendees:
+                  type: boolean
+                  default: true
+                  description: Send cancellation email to all attendees
+      responses:
+        "200":
+          description: Event cancelled successfully
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Event not found
+  /events/{eventCode}/registration/me:
+    get:
+      tags:
+        - Events
+      summary: Get my registration status
+      description: |
+        Get the current user's registration details for a specific event,
+        including personalized Zoom join URL.
+      operationId: getMyRegistration
+      parameters:
+        - name: eventCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Registration details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyRegistrationResponse"
+        "404":
+          description: Not registered or event not found
+  /events/registration:
+    post:
+      tags:
+        - Events
+      summary: Register for an event
+      description: |
+        Submit event registration for one or more attendees from the same membership.
+        Automatically checks per-member quota limits and creates Zoom registrations.
+        Each attendee receives a unique Zoom join URL.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventRegistrationRequest"
+            examples:
+              singleAttendee:
+                summary: Register one attendee
+                value:
+                  eventCode: "WFZO-2025-DXB"
+                  membershipId: "a4f2f66c-9b0a-4d93-a9e4-3d2f3e6e8a77"
+                  attendees:
+                    - firstName: "Aisha"
+                      lastName: "Khan"
+                      email: "aisha@example.com"
+                      organization: "Alpha Free Zone"
+                      jobTitle: "Director"
+                      phone: "+971501234567"
+                  consent: true
+              multipleAttendees:
+                summary: Register multiple attendees (batch)
+                value:
+                  eventCode: "WFZO-2025-DXB"
+                  membershipId: "a4f2f66c-9b0a-4d93-a9e4-3d2f3e6e8a77"
+                  attendees:
+                    - firstName: "Aisha"
+                      lastName: "Khan"
+                      email: "aisha@example.com"
+                      organization: "Alpha Free Zone"
+                    - firstName: "Mohammed"
+                      lastName: "Ahmed"
+                      email: "mohammed@example.com"
+                      organization: "Alpha Free Zone"
+                  consent: true
+      responses:
+        "201":
+          description: Registration created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventRegistrationResponse"
+              example:
+                registrationId: "f9cd072d-9b62-4b28-9d72-1b2ad6f93b6b"
+                eventCode: "WFZO-2025-DXB"
+                status: "confirmed"
+                membershipId: "a4f2f66c-9b0a-4d93-a9e4-3d2f3e6e8a77"
+                quota:
+                  allowed: 5
+                  used: 3
+                  remaining: 2
+                registrations:
+                  - attendeeId: "xyz-123"
+                    email: "aisha@example.com"
+                    status: "confirmed"
+                    joinUrl: "https://zoom.us/w/1234?tk=token1"
+                    zoomRegistrantId: "abc123"
+                  - attendeeId: "xyz-456"
+                    email: "mohammed@example.com"
+                    status: "confirmed"
+                    joinUrl: "https://zoom.us/w/1234?tk=token2"
+                    zoomRegistrantId: "def456"
+                message: "Successfully registered 2 attendee(s). 2 seats remaining."
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /events/registration/details/{eventCode}:
+    get:
+      tags:
+        - Events
+      summary: Get event registration details
+      description: Retrieve registration details for the given event code (e.g., seat status, registration URL, access info).
+      parameters:
+        - name: eventCode
+          in: path
+          description: Unique event code
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Registration details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventRegistrationDetails"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /events/registration/{eventCode}/cancel:
+    post:
+      tags:
+        - Events
+      summary: Cancel event registration
+      description: Cancel the user's registration for the specified event code.
+      parameters:
+        - name: eventCode
+          in: path
+          description: Unique event code
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Cancellation successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventRegistrationCancelResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /events/registration/{eventCode}/attendees:
+    get:
+      tags:
+        - Events
+      summary: List registered attendees for an event
+      description: |
+        Returns a paginated list of registrations/attendees for the given event code.
+        Works for all event types (webinars, member-hosted events, etc.). Supports text search and status filters.
+      operationId: getEventAttendees
+      parameters:
+        - name: eventCode
+          in: path
+          description: Unique event code
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Filter by registration status (multi-select)
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/RegistrationStatusFull"
+        - name: q
+          in: query
+          description: Free-text search across attendee name, email, and organization
+          required: false
+          schema:
+            type: string
+        - name: includeCancelled
+          in: query
+          description: Include registrations with status=cancelled in results
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Paginated attendee list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventAttendeeListResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /events/registration/{eventCode}/attendees/export:
+    get:
+      tags:
+        - Events
+      summary: Export attendees as Excel
+      description: |
+        Downloads the attendees list as an Excel file (.xlsx). Applies same filters as the list endpoint.
+      operationId: exportEventAttendees
+      parameters:
+        - name: eventCode
+          in: path
+          description: Unique event code
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Filter by registration status (multi-select)
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/RegistrationStatusFull"
+        - name: q
+          in: query
+          description: Free-text search across attendee name, email, and organization
+          required: false
+          schema:
+            type: string
+        - name: includeCancelled
+          in: query
+          description: Include registrations with status=cancelled in results
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Excel export
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: Attachment disposition including filename (e.g., attachment; filename="attendees.xlsx")
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /events/send-email:
+    post:
+      tags:
+        - Events
+      summary: Send event notification email
+      description: |
+        Send a templated email for event approval workflow notifications.
+        Supports 4 different email types for event submission and approval processes.
+        EVENT_SUBMITTED_FOR_APPROVAL sends two emails: one to admin and one to user.
+      operationId: sendEventEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendEventEmailRequest"
+            examples:
+            eventSubmitted:
+              summary: Send both admin notification and user confirmation when event is submitted
+              value:
+                email: "organizer@example.com"
+                type: "EVENT_SUBMITTED_FOR_APPROVAL"
+                eventCode: "WFZO-2025-DXB"
+                eventTitle: "Innovations in Aerospace"
+                presenterName: "Dr. Jane Smith"
+                scheduledDate: "2025-11-15T14:00:00Z"
+                eventType: "webinar"
+                capacity: 500
+                firstName: "John"
+                lastName: "Doe"
+              eventApproved:
+                summary: Notify user when event is approved
+                value:
+                  email: "organizer@example.com"
+                  type: "EVENT_APPROVED_USER"
+                  eventCode: "WFZO-2025-DXB"
+                  eventTitle: "Innovations in Aerospace"
+                  scheduledDate: "2025-11-15T14:00:00Z"
+                  eventType: "webinar"
+                  capacity: 500
+                  firstName: "John"
+                  lastName: "Doe"
+              eventRejected:
+                summary: Notify user when event is rejected
+                value:
+                  email: "organizer@example.com"
+                  type: "EVENT_REJECTED_USER"
+                  eventCode: "WFZO-2025-DXB"
+                  eventTitle: "Innovations in Aerospace"
+                  scheduledDate: "2025-11-15T14:00:00Z"
+                  rejectionReason: "Event conflicts with existing schedule"
+                  firstName: "John"
+                  lastName: "Doe"
+      responses:
+        "200":
+          description: Email sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendEventEmailResponse"
+              example:
+                message: "Email sent successfully"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "500":
+          description: Internal server error
+  /contactus:
+    post:
+      tags:
+        - Contact Us
+      summary: Submit a contact request
+      description: Submit a "Contact Us" request from the website including the user's details and message.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/User"
+          application/xml:
+            schema:
+              $ref: "#/components/schemas/User"
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/User"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /document/upload:
+    post:
+      tags:
+        - Document Management
+      summary: Upload a new document (multipart)
+      description:
+        Upload a file with optional metadata. For large files, chunked uploads can be handled out-of-band; this endpoint
+        registers and stores the final artifact. Usecases like
+        - Member Logo uploads
+        - Hero video Streaming in the home page(video uploaded via Strapi cloud to BLOB storage, but the streaming will be done via
+        backend services)
+        - FAQ videos also the same route
+        - in general any PDF, Video, Image uploads to handle from Website/admin portal
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/DocumentUploadForm"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentAsset"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /document/{id}/download:
+    get:
+      tags:
+        - Document Management
+      summary: Get a time-limited download URL
+      description: Returns a signed URL object for downloading or streaming the requested variant.
+        - Member Logo dowloads
+        - Hero video Streaming in the home page(video uploaded via Strapi cloud to BLOB storage, but the streaming will be done via
+        backend services)
+        - FAQ videos also the same route
+        - in general any PDF, Video, Image downloads to handle from Website/admin portal
+      parameters:
+        - name: id
+          in: path
+          description: Document identifier
+          required: true
+          schema:
+            type: string
+        - name: variant
+          in: query
+          description: Requested asset variant
+          required: false
+          schema:
+            type: string
+            enum: [original, thumbnail, preview, hlsManifest]
+        - name: inline
+          in: query
+          description: Request inline Content-Disposition where possible
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Download URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignedUrlResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /document/{id}/status:
+    get:
+      tags:
+        - Document Management
+      summary: Get document processing status
+      description: Returns processing status and available variants for the given document.
+      parameters:
+        - name: id
+          in: path
+          description: Document identifier
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Status information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentStatus"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+  /masterdata/{category}:
+    get:
+      tags:
+        - Master Data
+      summary: Get master data by category
+      description: Return master data identified by category (e.g., membershipCategories, tiers, countries, queryTypes).
+      operationId: getMasterDataByCategory
+      parameters:
+        - name: category
+          in: path
+          description: Category of content to return
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CodeValue"
+              examples:
+                membershipCategories:
+                  value:
+                    - { code: "zoneMember", value: "Zone Member" }
+                    - { code: "associateMember", value: "Associate Member" }
+                tiers:
+                  value: ["basic", "core", "premium"]
+                countries:
+                  value:
+                    - { code: "IN", value: "India" }
+                    - { code: "AE", value: "United Arab Emirates" }
+                queryTypes:
+                  value:
+                    - { code: "consultation", value: "General Enquiry" }
+                    - { code: "support", value: "Support" }
+        "404":
+          description: Page not found
+        default:
+          description: Unexpected error
+      security:
+        - api_key: []
+        - petstore_auth:
+            - read:masterdata
+  /masterdata/{page}:
+    get:
+      tags:
+        - Master Data
+      summary: Get master data for a page
+      description:
+        Return master data bundles tailored to a specific page (e.g., member-registration, event-registration, contact-us).
+        - Page - member-registration
+        - form fields for member registration, contact us etc
+        - membershipCategories
+        - tiers
+        - industries
+        - organisation types
+        - user types
+        - Page - Contact Us
+        - queryTypes
+        - Page - Approval workflow
+        - approvalStatuses
+      operationId: getMasterDataByPage
+      parameters:
+        - name: page
+          in: path
+          description: page name of content to return
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MasterData"
+              examples:
+                memberRegistration:
+                  value:
+                    page: "member-registration"
+                    data:
+                      membershipCategories:
+                        - { code: "zoneMember", value: "Zone Member" }
+                        - { code: "associateMember", value: "Associate Member" }
+                      tiers:
+                        - { code: "basic", value: "Basic" }
+                        - { code: "core", value: "Core" }
+                        - { code: "premium", value: "Premium" }
+                      countries:
+                        - { code: "IN", value: "India" }
+                        - { code: "AE", value: "United Arab Emirates" }
+                        - { code: "US", value: "United States" }
+                eventRegistration:
+                  value:
+                    page: "event-registration"
+                    data:
+                      eventTypes:
+                        - { code: "webinar", value: "Webinar" }
+                        - { code: "conference", value: "Conference" }
+                        - { code: "workshop", value: "Workshop" }
+                      countries:
+                        - { code: "IN", value: "India" }
+                        - { code: "AE", value: "United Arab Emirates" }
+                        - { code: "US", value: "United States" }
+                contactUs:
+                  value:
+                    page: "contact-us"
+                    data:
+                      queryTypes:
+                        - { code: "general", value: "General Inquiry" }
+                        - { code: "billing", value: "Billing" }
+                        - { code: "technical", value: "Technical" }
+        "404":
+          description: Page not found
+        default:
+          description: Unexpected error
+      security:
+        - api_key: []
+        - petstore_auth:
+            - read:masterdata
+  /cms/{page}:
+    get:
+      tags:
+        - CMS
+      summary: Get Strapi content for a page
+      description: Returns localized content from Strapi for the specified page key.
+      operationId: getContentByPage
+      parameters:
+        - name: page
+          in: path
+          description: page name of content to return
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CmsResponse"
+            application/xml:
+              schema:
+                $ref: "#/components/schemas/CmsResponse"
+        "404":
+          description: Page not found
+        default:
+          description: Unexpected error
+      security:
+        - api_key: []
+        - petstore_auth:
+            - write:pets
+            - read:pets
+  /membership/features/{type}:
+    get:
+      tags:
+        - Membership
+      summary: Get membership features/rules
+      description: Return features and rules associated with a membership type.
+      operationId: getMembershipFeatures
+      parameters:
+        - name: type
+          in: path
+          description: Membership type key
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EntitlementsMap"
+                example:
+                  - membershipType: "zoneMember"
+                    features:
+                      library:
+                        access: "restricted"
+                        quota:
+                          kind: "documents"
+                          limit: 10
+                          window: "month"
+                      webinars.wfzo:
+                        access: "unlimited"
+                        quota:
+                          kind: "seats"
+                          limit: 5
+                          window: "event"
+                      members.featuredView:
+                        access: "payment"
+                        monetary:
+                          paymentRequired: true
+                          discountAvailable: true
+                          discountType: "percentage"
+                          discountValue: 20
+        default:
+          description: Unexpected error
+      security:
+        - api_key: []
+    post:
+      tags:
+        - Membership
+      summary: Create or Update membership features/rules
+      description: Create or update features and rules associated with a membership type.
+      operationId: updateMembershipFeatures
+      parameters:
+        - name: type
+          in: path
+          description: Membership type key
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/EntitlementsMap"
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EntitlementsMap"
+        default:
+          description: Unexpected error
+      security:
+        - api_key: []
+    delete:
+      tags:
+        - Membership
+      summary: Delete membership features/rules
+      description: Delete features and rules associated with a membership type.
+      operationId: deleteMembershipFeatures
+      parameters:
+        - name: type
+          in: path
+          description: Membership type key
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+        default:
+          description: Unexpected error
+      security:
+        - api_key: []
+  /common/captcha:
+    get:
+      tags:
+        - Cross Cutting
+      summary: Get a new CAPTCHA challenge
+      description:
+        Very simple CAPTCHA service to generate mathematical challenges for forms(like addition or subtraction of 2 numbers). This will be an interface
+        to 3rd party CAPTCHA services in the future. We will be able to swap out the implementation without changing the API contract.
+      operationId: getCaptcha
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Captcha"
+              example:
+                imageUrl: "https://example.com/captcha/abc123.png"
+                token: "abc123"
+        default:
+          description: Unexpected error
+      security:
+        - api_key: []
+        - petstore_auth:
+            - read:captcha
+            - write:captcha
+  /common/email:
+    post:
+      tags:
+        - Cross Cutting
+      summary: Send a transactional email
+      description:
+        Send a transactional email using predefined templates. Supports dynamic parameters for personalization.
+        - Internal User account creation
+        - Password reset emails
+        - Membership approval notifications(each stage)
+        - Membership Payment link emails after CEO confirmation
+        - Membership Credential emails after payment confirmation
+        - Membership renewal reminders
+        - Event registration confirmation emails
+      operationId: sendEmail
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailRequest"
+            examples:
+              BasicEmail:
+                summary: Basic email with template and recipient
+                value:
+                  to: "<recipient@example.com>"
+                  template: "welcome_email"
+                  dynamicParameters:
+                    userName: "John Doe"
+                    subscriptionDate: "2025-09-23"
+              EmailWithCCAndBCC:
+                summary: Email with CC and BCC recipients
+                value:
+                  to: "<recipient@example.com>"
+                  cc: "<cc@example.com>"
+                  bcc: "<bcc@example.com>"
+                  template: "welcome_email"
+                  dynamicParameters:
+                    userName: "John Doe"
+                    subscriptionDate: "2025-09-23"
+      responses:
+        "200":
+          description: Email sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+              example:
+                code: "SUCCESS002"
+                type: "SUCCESS"
+                message: "Email sent successfully"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+              examples:
+                ERR006:
+                  value:
+                    code: "ERR006"
+                    type: "FAILURE"
+                    message: "Invalid email address"
+                ERR007:
+                  value:
+                    code: "ERR007"
+                    type: "FAILURE"
+                    message: "Template not found"
+  /mailerlite/subscribers:
+    post:
+      tags:
+        - MailerLite
+      summary: Create or update a subscriber
+      description: Add a new subscriber or update an existing one in MailerLite (Legacy v2 API). The default group (MAILERLITE_GROUP_ID) will be automatically added to all subscribers after creation.
+      operationId: upsertSubscriber
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertSubscriberDto"
+            examples:
+              newSubscriber:
+                summary: Create a new subscriber (default group will be auto-added)
+                value:
+                  email: "john.doe@example.com"
+                  fields:
+                    name: "John Doe"
+                    company: "Example Corp"
+                  groups: ["group_id_1", "group_id_2"]
+              updateSubscriber:
+                summary: Update existing subscriber
+                value:
+                  email: "john.doe@example.com"
+                  fields:
+                    name: "John Doe"
+                    company: "Updated Corp"
+                    phone: "+1234567890"
+      responses:
+        "200":
+          description: Subscriber created or updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+              examples:
+                success:
+                  value:
+                    code: "SUCCESS"
+                    type: "SUCCESS"
+                    message: "Subscriber upserted successfully"
+                    data:
+                      id: "123456789"
+                      email: "john.doe@example.com"
+                      status: "active"
+                      fields:
+                        name: "John Doe"
+                        company: "Example Corp"
+                      groups: ["113129360"]
+        "400":
+          description: Invalid input
+        default:
+          description: Unexpected error
+  /mailerlite/subscribers/{email}:
+    get:
+      tags:
+        - MailerLite
+      summary: Get subscriber by email
+      description: Retrieve subscriber details from MailerLite
+      operationId: getSubscriber
+      parameters:
+        - name: email
+          in: path
+          required: true
+          schema:
+            type: string
+            format: email
+          description: Subscriber email address
+      responses:
+        "200":
+          description: Subscriber found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+              examples:
+                subscriberFound:
+                  value:
+                    code: "SUCCESS"
+                    type: "SUCCESS"
+                    message: "Subscriber retrieved successfully"
+                    data:
+                      id: "123456789"
+                      email: "john.doe@example.com"
+                      status: "active"
+                      fields:
+                        name: "John Doe"
+                        company: "Example Corp"
+                        phone: "+1234567890"
+                      groups: ["113129360"]
+                      subscribed_at: "2023-01-15T10:30:00Z"
+        "404":
+          description: Subscriber not found
+        default:
+          description: Unexpected error
+    delete:
+      tags:
+        - MailerLite
+      summary: Delete a subscriber
+      description: Remove a subscriber from MailerLite
+      operationId: deleteSubscriber
+      parameters:
+        - name: email
+          in: path
+          required: true
+          schema:
+            type: string
+            format: email
+          description: Subscriber email address
+      responses:
+        "200":
+          description: Subscriber deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+              examples:
+                deleted:
+                  value:
+                    code: "SUCCESS"
+                    type: "SUCCESS"
+                    message: "Subscriber deleted successfully"
+                    data:
+                      success: true
+        "404":
+          description: Subscriber not found
+        default:
+          description: Unexpected error
+components:
+  parameters:
+    page:
+      in: query
+      name: page
+      description: Page number for pagination (1-based)
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    pageSize:
+      in: query
+      name: pageSize
+      description: Number of items per page (max 200)
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 20
+  schemas:
+    MediaKind:
+      type: string
+      description: Logical media type classification
+      enum: [document, image, video]
+    DocumentUploadForm:
+      type: object
+      description: Multipart form to upload any asset (image, video, document)
+      required: [file]
+      properties:
+        file:
+          type: string
+          format: binary
+          description: The file to upload
+        mediaKind:
+          $ref: "#/components/schemas/MediaKind"
+        purpose:
+          type: string
+          description: Logical usage context (e.g., member-logo, event-hero, library-asset)
+        checksum:
+          type: string
+          description: Optional SHA-256 checksum (hex) for integrity verification
+        fileName:
+          type: string
+          description: Optional explicit file name override
+        contentType:
+          type: string
+          description: Optional explicit MIME type; server may override based on detection
+    DocumentVariant:
+      type: object
+      description: A concrete downloadable/streamable rendition of the asset
+      required: [key, url, contentType]
+      properties:
+        key:
+          type: string
+          enum: [original, thumbnail, preview, hlsManifest]
+        url:
+          type: string
+          format: uri
+        contentType:
+          type: string
+        width:
+          type: integer
+          nullable: true
+        height:
+          type: integer
+          nullable: true
+        bitrateKbps:
+          type: integer
+          nullable: true
+        size:
+          type: integer
+          nullable: true
+        ready:
+          type: boolean
+          description: Whether this variant is ready to be consumed
+          default: true
+    DocumentAsset:
+      type: object
+      description: Stored asset with metadata and available variants
+      required: [id, fileName, contentType, size, mediaKind, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+        contentType:
+          type: string
+        size:
+          type: integer
+          description: Size in bytes
+        mediaKind:
+          $ref: "#/components/schemas/MediaKind"
+        createdAt:
+          type: string
+          format: date-time
+        variants:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentVariant"
+    SignedUrlResponse:
+      type: object
+      description: A time-limited URL to download/stream the asset
+      required: [url, expiresAt]
+      properties:
+        url:
+          type: string
+          format: uri
+        expiresAt:
+          type: string
+          format: date-time
+        contentType:
+          type: string
+        fileName:
+          type: string
+        size:
+          type: integer
+          nullable: true
+        disposition:
+          type: string
+          enum: [inline, attachment]
+          default: attachment
+        variant:
+          type: string
+          enum: [original, thumbnail, preview, hlsManifest]
+          nullable: true
+    DocumentStatus:
+      type: object
+      description: Processing status and variants for a document/asset
+      required: [id, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [processing, ready, failed]
+        message:
+          type: string
+          nullable: true
+        variants:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentVariant"
+        updatedAt:
+          type: string
+          format: date-time
+    InternalUser:
+      type: object
+      description: WFZO internal user profile
+      required: [id, email, roles, status]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        displayName: { type: string }
+        roles:
+          type: array
+          items:
+            $ref: "#/components/schemas/Role"
+        status:
+          type: string
+          enum: [active, disabled]
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Role:
+      type: object
+      description: Internal role
+      required: [key, name]
+      properties:
+        key: { type: string, example: admin }
+        name: { type: string, example: Administrator }
+        permissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Permission"
+    Permission:
+      type: object
+      description: Fine-grained permission key
+      properties:
+        key: { type: string, example: users.read }
+        name: { type: string, example: Read Users }
+    InternalLoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+    InternalLoginResponse:
+      type: object
+      required: [token, expiresAt]
+      properties:
+        token: { type: string, description: Bearer JWT }
+        expiresAt: { type: string, format: date-time }
+        user:
+          $ref: "#/components/schemas/InternalUser"
+    InternalUserCreateRequest:
+      type: object
+      required: [email, roles]
+      properties:
+        email: { type: string, format: email }
+        displayName: { type: string }
+        roles:
+          type: array
+          items:
+            type: string
+            description: Role keys
+    InternalUserUpdateRequest:
+      type: object
+      properties:
+        displayName: { type: string }
+        roles:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [active, disabled]
+    InternalUserListData:
+      type: object
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/InternalUser"
+        page:
+          $ref: "#/components/schemas/PageData"
+    InternalUserListResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponse"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/InternalUserListData"
+    PageData:
+      type: object
+      description: Pagination metadata for list responses
+      required: [total, page, pageSize]
+      properties:
+        total: { type: integer, minimum: 0, example: 42 }
+        page: { type: integer, minimum: 1, example: 1 }
+        pageSize: { type: integer, minimum: 1, example: 20 }
+    UserType:
+      type: string
+      description: Classification of a user within a membership context
+      enum: [Primary, Secondry, Non Member, Internal]
+    Tier:
+      type: array
+      items:
+        type: string
+      enum: [basic, core, premium]
+      description: Membership tier options (basic/core/premium)
+    MembershipCategory:
+      type: string
+      description: Membership category options
+      enum:
+        [zoneMember, freeZoneAssociation, corporateMembers, professionalMembers, strategicMembers]
+    UserTypeList:
+      type: array
+      uniqueItems: true
+      items:
+        $ref: "#/components/schemas/UserType"
+      description: Unique list of user types
+    UserSearchData:
+      type: object
+      description: Paged list of users with metadata
+      required: [items, total, page, pageSize]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/User" }
+        page:
+          $ref: "#/components/schemas/PageData"
+    UserSearchResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponse"
+        - type: object
+          required: [data]
+          description: Wrapper including status and the user search payload
+          properties:
+            data:
+              $ref: "#/components/schemas/UserSearchData"
+    User:
+      type: object
+      description: User account object with membership context fields
+      properties:
+        password:
+          type: string
+          example: 1234Test
+        email:
+          type: string
+          example: test@gmail.com
+        memberId:
+          type: string
+          format: uuid
+        userType:
+          $ref: "#/components/schemas/UserType"
+        newsLetterSubscription:
+          type: boolean
+          example: true
+        firstName:
+          type: string
+          example: Test
+        lastName:
+          type: string
+          example: Test
+        correspondanceUser:
+          type: boolean
+          example: false
+        designation:
+          type: string
+          example: Manager
+        contactNumber:
+          type: string
+          example: "+1234567890"
+    MemberSearchResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponse"
+        - type: object
+          required: [data]
+          description: Wrapper including status and the member search payload
+          properties:
+            data:
+              $ref: "#/components/schemas/MemberSearchData"
+    MemberSearchData:
+      type: object
+      description: Paged list of members with metadata
+      required: [items, total, page, pageSize]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/MemberInfo" }
+        page:
+          $ref: "#/components/schemas/PageData"
+    MemberMapCoordinates:
+      type: object
+      description: Geographic coordinates for a member's marker on the map
+      required: [latitude, longitude]
+      properties:
+        companyName:
+          type: string
+          example: "Example Corp"
+        latitude:
+          type: number
+          format: float
+          example: 20.5937
+        longitude:
+          type: number
+          format: float
+          example: 78.9629
+    MemberCount:
+      type: object
+      description: Count rollups by country or continent
+      required: [type, count]
+      properties:
+        type:
+          type: string
+          enum: [Country, Continent]
+          example: Country
+        description:
+          type: string
+          example: India
+        count:
+          type: integer
+          example: 150
+    MemberMapData:
+      type: object
+      description: "Container for map data variants: either aggregated counts (view-map) or coordinate markers (view-member)"
+      properties:
+        continentMemberCount:
+          type: array
+          items:
+            $ref: "#/components/schemas/MemberCount"
+        countryMemberCount:
+          type: array
+          items:
+            $ref: "#/components/schemas/MemberCount"
+        companyMapData:
+          type: array
+          items:
+            $ref: "#/components/schemas/MemberMapCoordinates"
+    CodeValue:
+      type: object
+      description: Generic code/value pair used across master data
+      required: [code, value]
+      properties:
+        code:
+          type: string
+          example: "IN"
+        value:
+          type: string
+          example: "India"
+    MasterData:
+      type: object
+      description: Named page bundle of master data lists
+      required: [page, data]
+      properties:
+        page:
+          type: string
+          description: Echo of the requested page key'
+        data:
+          type: object
+          description: A map of master-data lists relevant to the page
+          additionalProperties:
+            type: array
+            items:
+              $ref: "#/components/schemas/CodeValue"
+    CmsResponse:
+      type: object
+      description: Strapi CMS content payload for a page and locale
+      properties:
+        page:
+          type: string
+          example: home
+        locale:
+          type: string
+          example: en
+        data:
+          type: object
+          example: {}
+      xml:
+        name: cmsresponse
+    Address:
+      type: object
+      description: Postal address with optional coordinates
+      required: [line1, city, state, country, zip]
+      properties:
+        line1:
+          type: string
+          example: "123 Main St"
+        line2:
+          type: string
+          example: "Suite 400"
+        city:
+          type: string
+          example: "Metropolis"
+        state:
+          type: string
+          example: "NY"
+        country:
+          type: string
+          example: "USA"
+        zip:
+          type: string
+          example: "12345"
+        latitude:
+          type: number
+          format: float
+          example: 40.7128
+        longitude:
+          type: number
+          format: float
+          example: -74.0060
+    UserAccess:
+      type: object
+      description: Calculated entitlements and access controls for a user
+      required: [user, membership, roles, entitlements, generatedAt]
+      properties:
+        user:
+          $ref: "#/components/schemas/UserInfo"
+        membershipId:
+          type: string
+          format: uuid
+        entitlements:
+          $ref: "#/components/schemas/EntitlementsMap"
+        generatedAt:
+          type: string
+          format: date-time
+    UserInfo:
+      type: object
+      description: Basic identification for a user
+      required: [id, email]
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string, format: email }
+    PartnersAndSponsors:
+      type: object
+      description: Lists of partners and sponsors displayed on the site
+      required: [sponsors, partners]
+      properties:
+        sponsors:
+          type: array
+          items:
+            $ref: "#/components/schemas/SponsorDetails"
+        partners:
+          type: array
+          items:
+            $ref: "#/components/schemas/PartnerDetails"
+    PartnerDetails:
+      type: object
+      description: Partner organization details
+      required: [id, name, logoUrl, description, websiteUrl]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        logoUrl: { type: string, format: uri }
+        description: { type: string }
+        websiteUrl:
+          type: string
+          format: uri
+          nullable: true
+    SponsorDetails:
+      type: object
+      description: Sponsor organization details
+      required: [id, name, logoUrl, description, websiteUrl]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        logoUrl: { type: string, format: uri }
+        description: { type: string }
+        websiteUrl:
+          type: string
+          format: uri
+          nullable: true
+    FeaturedMember:
+      type: object
+      description: Minimal profile for a featured member card
+      required: [id, memberCode, name, logoUrl, description, industries]
+      properties:
+        id: { type: string, format: uuid }
+        memberCode: { type: string }
+        name: { type: string }
+        logoUrl: { type: string, format: uri }
+        country: { type: string }
+        description: { type: string }
+        industries:
+          type: array
+          items: { type: string }
+    MemberConsent:
+      type: object
+      description: Member consent for communications and data sharing
+      required: [articleOfAssociationConsent, memberShipFeeConsent]
+      properties:
+        articleOfAssociationConsent:
+          type: boolean
+          description: Consent to receive email communications
+        articleOfAssociationCriteriaConsent:
+          type: boolean
+          description: Consent to receive email communications
+        memberShipFeeConsent:
+          type: boolean
+          description: Consent to share data with third parties
+        publicationConsent:
+          type: boolean
+          description: Consent to share data in publications
+    OrganisationQuestionnaire:
+      type: object
+      description: Responses to organization questionnaire
+      properties:
+        establishedYear:
+          type: integer
+          nullable: true
+        numberOfEmployees:
+          type: integer
+          nullable: true
+    OrganisationInfo:
+      type: object
+      description: Basic organization details
+      required: [companyName, websiteUrl]
+      properties:
+        companyName:
+          type: string
+        websiteUrl:
+          type: string
+          format: uri
+          nullable: true
+        linkedInUrl:
+          type: string
+          format: uri
+          nullable: true
+        industries:
+          type: array
+          items:
+            type: string
+        memberLogoUrl:
+          type: string
+          format: uri
+          nullable: true
+        organisationImageUrl:
+          type: string
+          format: uri
+          nullable: true
+        memberVideoUrl:
+          type: string
+          format: uri
+          nullable: true
+        OrganisationQuestionnaire:
+          $ref: "#/components/schemas/OrganisationQuestionnaire"
+    MemberInfo:
+      type: object
+      description: Membership attributes and status for a member organization
+      required: [category, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        users:
+          type: array
+          items: { $ref: "#/components/schemas/User" }
+        Address:
+          $ref: "#/components/schemas/Address"
+        category:
+          type: string
+          $ref: "#/components/schemas/MembershipCategory"
+          description:
+            Membership category. This is the basic Membership level. Current system supports 3
+            categories votingMember, associateMember, partnerObserver with no additional tier. This is expected
+            to be extended to 6 with multiple tier. We will also control the categories to be displayed or available
+            in the website using a flag(active/inactive).
+        tier:
+          type: string
+          $ref: "#/components/schemas/Tier"
+          description:
+            Membership tier within the category. This is expected to be extended to 3 tiers - basic, core, premium.
+            We will also control the tiers to be displayed or available in the
+        status:
+          type: string
+          enum: [active, expired, pendingApproval, pendingFormSubmission]
+        validUntil:
+          type: string
+          format: date-time
+          nullable: true
+        OrganisationInfo:
+          $ref: "#/components/schemas/OrganisationInfo"
+        MemberConsent:
+          $ref: "#/components/schemas/MemberConsent"
+        featuredMember:
+          type: boolean
+          description: Whether to feature this member on the website
+    MemberActivity:
+      type: object
+      description: Record of a member's feature usage activity
+      required: [memberId, featureKey, timestamp]
+      properties:
+        memberId:
+          type: string
+          format: uuid
+        featureKey:
+          type: string
+          example: library.downloads
+        useageCount:
+          type: integer
+          example: 10
+        timestamp:
+          type: string
+          format: date-time
+          description: Time of the activity or last update
+    EntitlementsMap:
+      type: object
+      description: Map of feature keys to entitlement objects
+      additionalProperties:
+        $ref: "#/components/schemas/Entitlement"
+    Entitlement:
+      type: object
+      description: Access control details for a feature or capability
+      required: [access]
+      properties:
+        access:
+          $ref: "#/components/schemas/AccessLevel"
+        quota:
+          $ref: "#/components/schemas/Quota"
+        monetary:
+          $ref: "#/components/schemas/Monetary"
+        approval:
+          $ref: "#/components/schemas/Approval"
+        notes:
+          type: string
+    AccessLevel:
+      type: string
+      enum: [none, restricted, unlimited, payment, approval]
+      description: |
+        none       → no access
+        restricted → limited by quota (views/seats/downloads/etc.)
+        unlimited  → unlimited usage
+        payment    → available upon payment (may have member discount)
+        approval   → requires approval (e.g., WFZO Board)
+    Quota:
+      type: object
+      description: Usage limits (present when access=restricted or per-event seat limits apply)
+      properties:
+        kind:
+          type: string
+          description: Logical unit of restriction (e.g., seats, views, downloads, documents, profiles, connections)
+          example: seats
+        limit:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Maximum allowed in the window (null = not set)
+        used:
+          type: integer
+          minimum: 0
+        remaining:
+          type: integer
+          minimum: 0
+          readOnly: true
+        window:
+          type: string
+          enum: [event, day, week, month, year, rolling-30d]
+          description: Scope of the limit/reset policy
+        resetsAt:
+          type: string
+          format: date-time
+          nullable: true
+    Monetary:
+      type: object
+      description: Payment-related information for paywalled access
+      properties:
+        paymentRequired:
+          type: boolean
+          default: true
+        discountAvailable:
+          type: boolean
+          default: false
+        discountType:
+          type: string
+          nullable: true
+          enum: [percentage, flat, null]
+        discountValue:
+          type: number
+          nullable: true
+          description: Percentage (e.g., 10) or flat currency amount, depending on discountType
+        currency:
+          type: string
+          nullable: true
+          example: USD
+    Approval:
+      type: object
+      description: Approval workflow data for restricted features
+      properties:
+        required:
+          type: boolean
+          default: true
+        authority:
+          type: string
+          example: admin
+        status:
+          type: string
+          enum: [pending, approved, rejected, not_requested]
+          default: pending
+    EventType:
+      type: string
+      description: Type of online event
+      enum: [webinar, meeting]
+    EventStatus:
+      type: string
+      description: Current status of an event
+      enum: [draft, scheduled, ongoing, completed, cancelled]
+    EventPresenter:
+      type: object
+      description: Presenter/host information
+      required: [name, email]
+      properties:
+        name: { type: string, example: "Dr. Jane Smith" }
+        email: { type: string, format: email, example: "jane@example.com" }
+        bio: { type: string, nullable: true }
+    EventCreator:
+      type: object
+      description: Event creator details
+      properties:
+        type: { type: string, enum: [wfzo, member] }
+        memberId: { type: string, format: uuid, nullable: true }
+        userId: { type: string, format: uuid }
+        memberName: { type: string, nullable: true }
+    RegistrationSettings:
+      type: object
+      description: Event registration configuration
+      properties:
+        requiresApproval:
+          type: boolean
+          default: false
+        registrationDeadline:
+          type: string
+          format: date-time
+          nullable: true
+        allowWaitlist:
+          type: boolean
+          default: true
+        perMemberQuota:
+          type: object
+          description: Seat quotas per membership tier
+          properties:
+            basic: { type: integer, minimum: 1, example: 2 }
+            core: { type: integer, minimum: 1, example: 5 }
+            premium: { type: integer, minimum: 1, example: 10 }
+    ZoomSettings:
+      type: object
+      description: Zoom integration settings
+      properties:
+        autoCreate:
+          type: boolean
+          default: true
+          description: Automatically create Zoom meeting/webinar
+        type:
+          $ref: "#/components/schemas/EventType"
+        settings:
+          type: object
+          properties:
+            hostVideo: { type: boolean, default: true }
+            participantVideo: { type: boolean, default: false }
+            muteUponEntry: { type: boolean, default: true }
+            waitingRoom: { type: boolean, default: true }
+            autoRecording: { type: string, enum: [none, local, cloud], default: none }
+    ZoomDetails:
+      type: object
+      description: Zoom meeting/webinar details
+      required: [meetingId, hostJoinUrl]
+      properties:
+        meetingId: { type: string }
+        webinarId: { type: string, nullable: true }
+        hostJoinUrl: { type: string, format: uri }
+        registrationUrl: { type: string, format: uri, nullable: true }
+        password: { type: string, nullable: true }
+    EventCreateRequest:
+      type: object
+      description: Request to create a new event (webhook from Strapi)
+      required: [eventCode, type, title, scheduledAt, durationMinutes, presenter, capacity]
+      properties:
+        eventCode: { type: string, example: "WFZO-2025-DXB" }
+        type:
+          $ref: "#/components/schemas/EventType"
+        title: { type: string, example: "Innovations in Aerospace" }
+        description: { type: string, nullable: true }
+        scheduledAt:
+          type: string
+          format: date-time
+          example: "2025-11-15T14:00:00Z"
+        durationMinutes:
+          type: integer
+          minimum: 15
+          maximum: 300
+          example: 60
+        timezone: { type: string, example: "Asia/Dubai", default: "UTC" }
+        presenter:
+          $ref: "#/components/schemas/EventPresenter"
+        capacity:
+          type: integer
+          minimum: 10
+          maximum: 10000
+          example: 500
+        language: { type: string, example: "en", default: "en" }
+        createdBy:
+          type: object
+          properties:
+            memberId: { type: string, format: uuid, nullable: true }
+            userId: { type: string, format: uuid }
+        registrationSettings:
+          $ref: "#/components/schemas/RegistrationSettings"
+        zoom:
+          $ref: "#/components/schemas/ZoomSettings"
+    EventCreateResponse:
+      type: object
+      description: Response after creating an event
+      required: [id, eventCode, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        eventCode: { type: string }
+        status:
+          $ref: "#/components/schemas/EventStatus"
+        zoom:
+          $ref: "#/components/schemas/ZoomDetails"
+        createdAt: { type: string, format: date-time }
+    EventUpdateRequest:
+      type: object
+      description: Request to update event details
+      properties:
+        title: { type: string }
+        description: { type: string }
+        scheduledAt: { type: string, format: date-time }
+        durationMinutes: { type: integer, minimum: 15, maximum: 300 }
+        capacity: { type: integer, minimum: 10, maximum: 10000 }
+        presenter:
+          $ref: "#/components/schemas/EventPresenter"
+        registrationSettings:
+          $ref: "#/components/schemas/RegistrationSettings"
+    EventListItem:
+      type: object
+      description: Brief event information for list views
+      required: [id, eventCode, title, scheduledAt, type, capacity, status]
+      properties:
+        id: { type: string, format: uuid }
+        eventCode: { type: string }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        scheduledAt: { type: string, format: date-time }
+        durationMinutes: { type: integer }
+        type:
+          $ref: "#/components/schemas/EventType"
+        capacity: { type: integer }
+        seatsAvailable: { type: integer }
+        status:
+          $ref: "#/components/schemas/EventStatus"
+        createdBy:
+          $ref: "#/components/schemas/EventCreator"
+    EventListResponse:
+      type: object
+      description: Paginated list of events
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventListItem"
+        page:
+          $ref: "#/components/schemas/PageData"
+    EventDetails:
+      type: object
+      description: Complete event information
+      required: [id, eventCode, title, scheduledAt, type, capacity, status]
+      properties:
+        id: { type: string, format: uuid }
+        eventCode: { type: string }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        type:
+          $ref: "#/components/schemas/EventType"
+        scheduledAt: { type: string, format: date-time }
+        durationMinutes: { type: integer }
+        timezone: { type: string }
+        capacity: { type: integer }
+        presenter:
+          $ref: "#/components/schemas/EventPresenter"
+        status:
+          $ref: "#/components/schemas/EventStatus"
+        registration:
+          type: object
+          description: Registration status and availability
+          properties:
+            isOpen: { type: boolean }
+            deadline: { type: string, format: date-time, nullable: true }
+            totalSeats: { type: integer }
+            seatsAvailable: { type: integer }
+            seatsWaitlist: { type: integer }
+            userRegistered: { type: boolean }
+            memberQuota:
+              type: object
+              description: Current user's member quota status
+              properties:
+                allowed: { type: integer }
+                used: { type: integer }
+                remaining: { type: integer }
+        createdBy:
+          $ref: "#/components/schemas/EventCreator"
+        zoom:
+          type: object
+          properties:
+            type:
+              $ref: "#/components/schemas/EventType"
+            registrationUrl: { type: string, format: uri, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    MemberQuota:
+      type: object
+      description: Member's quota status for an event
+      required: [allowed, used, remaining]
+      properties:
+        allowed: { type: integer, minimum: 0 }
+        used: { type: integer, minimum: 0 }
+        remaining: { type: integer, minimum: 0 }
+    AttendeeRegistration:
+      type: object
+      description: Individual attendee registration result
+      required: [attendeeId, email, status]
+      properties:
+        attendeeId: { type: string, format: uuid }
+        email: { type: string, format: email }
+        status:
+          type: string
+          enum: [confirmed, waitlisted, pendingPayment]
+        joinUrl: { type: string, format: uri, nullable: true }
+        zoomRegistrantId: { type: string, nullable: true }
+    MyRegistrationResponse:
+      type: object
+      description: Current user's registration details
+      required: [registered]
+      properties:
+        registered: { type: boolean }
+        registrationId: { type: string, format: uuid, nullable: true }
+        attendee:
+          $ref: "#/components/schemas/EventAttendeeInfo"
+        joinUrl: { type: string, format: uri, nullable: true }
+        status:
+          type: string
+          enum: [confirmed, waitlisted, cancelled]
+          nullable: true
+        registeredAt: { type: string, format: date-time, nullable: true }
+    ApiResponse:
+      type: object
+      description: Standard API response envelope for status reporting
+      properties:
+        code:
+          type: integer
+          format: int32
+        type:
+          type: string
+        message:
+          type: string
+      xml:
+        name: "##default"
+    EventRegistrationRequest:
+      type: object
+      description: Request to register one or more attendees for an event
+      required: [eventCode, attendees, consent]
+      properties:
+        eventCode: { type: string, example: WFZO-2025-DXB }
+        membershipId: { type: string, format: uuid, nullable: true }
+        attendees:
+          type: array
+          description: List of attendees to register (supports batch registration)
+          minItems: 1
+          items:
+            type: object
+            required: [firstName, lastName, email]
+            properties:
+              firstName: { type: string, example: "Aisha" }
+              lastName: { type: string, example: "Khan" }
+              email: { type: string, format: email, example: "aisha@example.com" }
+              organization: { type: string, example: "Alpha Free Zone" }
+              jobTitle: { type: string, nullable: true }
+              phone: { type: string, nullable: true }
+        consent: { type: boolean, description: User consent for processing, example: true }
+    EventRegistrationResponse:
+      type: object
+      description: Result of event registration with quota status
+      required: [registrationId, eventCode, status, registrations]
+      properties:
+        registrationId: { type: string, format: uuid }
+        eventCode: { type: string }
+        status:
+          type: string
+          enum: [confirmed, waitlisted, pendingPayment]
+        membershipId: { type: string, format: uuid, nullable: true }
+        quota:
+          $ref: "#/components/schemas/MemberQuota"
+        registrations:
+          type: array
+          description: Individual registration results for each attendee
+          items:
+            $ref: "#/components/schemas/AttendeeRegistration"
+        message:
+          {
+            type: string,
+            nullable: true,
+            description: "Success or info message about registration",
+          }
+    EventRegistrationDetails:
+      type: object
+      description: Current registration state and seat status for an event
+      properties:
+        eventCode: { type: string }
+        totalCapacity: { type: integer, example: 500 }
+        seatsTaken: { type: integer, example: 420 }
+        seatsRemaining: { type: integer, example: 80 }
+        registrationOpen: { type: boolean, example: true }
+        registrationUrl: { type: string, format: uri, nullable: true }
+        userRegistered: { type: boolean, example: false }
+        userSeats: { type: integer, example: 0 }
+    EventRegistrationCancelResponse:
+      type: object
+      description: Response after cancelling a registration
+      required: [eventCode, status]
+      properties:
+        eventCode: { type: string }
+        status: { type: string, enum: [cancelled] }
+        message: { type: string, nullable: true }
+    RegistrationStatusFull:
+      type: string
+      description: Registration statuses including cancellation
+      enum: [confirmed, waitlisted, pendingPayment, cancelled]
+    EventAttendeeInfo:
+      type: object
+      description: Basic attendee information
+      required: [firstName, lastName, email]
+      properties:
+        firstName: { type: string }
+        lastName: { type: string }
+        email: { type: string, format: email }
+        organization: { type: string }
+    EventAttendee:
+      type: object
+      description: An event registration record with attendee details
+      required: [registrationId, eventCode, attendee, seats, status, registeredAt]
+      properties:
+        registrationId: { type: string, format: uuid }
+        eventCode: { type: string }
+        attendee:
+          $ref: "#/components/schemas/EventAttendeeInfo"
+        membershipId: { type: string, format: uuid, nullable: true }
+        seats: { type: integer, minimum: 1 }
+        status: { $ref: "#/components/schemas/RegistrationStatusFull" }
+        registeredAt: { type: string, format: date-time }
+        cancelledAt: { type: string, format: date-time, nullable: true }
+        cancelReason: { type: string, nullable: true }
+        checkInAt: { type: string, format: date-time, nullable: true }
+    EventAttendeeListData:
+      type: object
+      description: Paged list of event attendees with metadata
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/EventAttendee" }
+        page:
+          $ref: "#/components/schemas/PageData"
+    EventAttendeeListResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponse"
+        - type: object
+          required: [data]
+          description: Wrapper including status and the attendee list payload
+          properties:
+            data:
+              $ref: "#/components/schemas/EventAttendeeListData"
+    SendEventEmailRequest:
+      type: object
+      description: Request to send an event notification email
+      required: [email, type]
+      properties:
+        email:
+          type: string
+          format: email
+          description: Recipient email address (for admin notifications like EVENT_SUBMITTED_FOR_APPROVAL, this is used for template data but email goes to admin from env)
+          example: "user@example.com"
+        type:
+          type: string
+          enum: [EVENT_SUBMITTED_FOR_APPROVAL, EVENT_SUBMITTED_USER, EVENT_APPROVED_USER, EVENT_REJECTED_USER]
+          description: Type of email to send
+          example: "EVENT_APPROVED_USER"
+        eventCode:
+          type: string
+          description: Event code
+          example: "WFZO-2025-DXB"
+        eventTitle:
+          type: string
+          description: Event title
+          example: "Innovations in Aerospace"
+        presenterName:
+          type: string
+          description: Presenter name
+          example: "Dr. Jane Smith"
+        scheduledDate:
+          type: string
+          format: date-time
+          description: Event scheduled date and time
+          example: "2025-11-15T14:00:00Z"
+        eventType:
+          type: string
+          enum: [webinar, event]
+          description: Event type
+          example: "webinar"
+        capacity:
+          type: integer
+          description: Event capacity
+          example: 500
+        rejectionReason:
+          type: string
+          description: Reason for rejection (for rejected emails)
+          example: "Event conflicts with existing schedule"
+        firstName:
+          type: string
+          description: User first name
+          example: "John"
+        lastName:
+          type: string
+          description: User last name
+          example: "Doe"
+    SendEventEmailResponse:
+      type: object
+      description: Response after sending event email
+      required: [message]
+      properties:
+        message:
+          type: string
+          description: Success message
+          example: "Email sent successfully"
+    Captcha:
+      type: object
+      description: CAPTCHA challenge with image URL and solution token
+      required: [imageUrl, token]
+      properties:
+        imageUrl:
+          type: string
+          format: uri
+        token:
+          type: string
+    EmailRequest:
+      type: object
+      description: Transactional email request payload
+      required: [to, template]
+      properties:
+        page:
+          type: string
+          description: Contextual page for the email (e.g., registration, password-reset)
+        template:
+          type: string
+          description: Template identifier
+        dynamicParameters:
+          type: object
+          additionalProperties:
+            type: string
+          description: Key-value pairs to personalize the template
+    UpsertSubscriberDto:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          description: Subscriber email address
+        fields:
+          type: object
+          additionalProperties:
+            type: string
+          description: Custom fields for the subscriber
+        groups:
+          type: array
+          items:
+            type: string
+          description: List of group IDs to add the subscriber to
+  securitySchemes:
+    petstore_auth:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: https://petstore3.swagger.io/oauth/authorize
+          scopes:
+            write:pets: modify pets in your account
+            read:pets: read your pets
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    api_key:
+      type: apiKey
+      name: api_key
+      in: header

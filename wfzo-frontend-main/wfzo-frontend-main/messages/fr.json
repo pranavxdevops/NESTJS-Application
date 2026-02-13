@@ -1,0 +1,10 @@
+{
+  "Index": {
+    "title": "Bienvenue dans l'exemple Next.js i18n",
+    "description": "Cette page est rendue en français."
+  },
+  "Dashboard": {
+    "title": "Tableau de bord",
+    "welcome": "Bonjour, bienvenue sur votre tableau de bord !"
+  }
+}

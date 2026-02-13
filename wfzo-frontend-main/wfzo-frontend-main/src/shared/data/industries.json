@@ -1,0 +1,14 @@
+[
+  { "name": "Logistics", "isActive": true ,"id":1},
+  { "name": "Real Estate", "isActive": false,"id":2 },
+  { "name": "Finance", "isActive": true,"id":3},
+  { "name": "Information Technology", "isActive": false,"id":4 },
+  { "name": "Healthcare", "isActive": true ,"id":5},
+  { "name": "Consulting", "isActive": false,"id":6 },
+  { "name": "Education", "isActive": true,"id":7 },
+  { "name": "Trade", "isActive": false,"id":8},
+  { "name": "Hospitality", "isActive": true,"id":9 },
+  { "name": "Manufacturing", "isActive": false,"id":10 },
+  { "name": "Renewables", "isActive": true,"id":11 },
+  { "name": "Industrial Development", "isActive": false,"id":12 }
+]

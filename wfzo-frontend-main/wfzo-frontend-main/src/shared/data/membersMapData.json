@@ -1,0 +1,161 @@
+[{
+    "id": 1,
+    "name": "DIEZ",
+    "address": "Dubai, United Arab Emirates",
+    "countryCode": "AE",
+    "countryName": "United Arab Emirates",
+    "continent": "Asia",
+    "city": "Dubai",
+    "coordinates": [55.2708, 25.2048]
+  },
+  {
+    "id": 2,
+    "name": "Poti Free Industrial Zone",
+    "address": "Tbilisi, Georgia",
+    "countryCode": "GE",
+    "countryName": "Georgia",
+    "continent": "Europe",
+    "city": "Tbilisi",
+    "coordinates": [41.6938, 44.8015]
+  },
+  {
+    "id": "3",
+    "name": "ZETA Group",
+    "address": "San José, Costa Rica",
+    "countryCode": "CR",
+    "countryName": "Costa Rica",
+    "continent": "South America",
+    "city": "San José",
+    "coordinates": [-84.0907, 9.9281]
+  },
+  {
+    "id": "4",
+    "name": "NavoiFEZ",
+    "address": "Karmana district, Uzbekistan",
+    "countryCode": "UZ",
+    "countryName": "Uzbekistan",
+    "continent": "Asia",
+    "city": "Navoi",
+    "coordinates": [40.0974, 65.3525]
+  },
+  {
+    "id": "5",
+    "name": "Consorci de la Zona Franca de Barcelona",
+    "address": "Barcelona, Spain",
+    "countryCode": "ES",
+    "countryName": "Spain",
+    "continent": "Europe",
+    "city": "Barcelona",
+    "coordinates": [ 2.1734, 43.000]
+  },
+  {
+    "id": "6",
+    "name": "ZOFRAVILLA S.A",
+    "address": "Santa Fe, Argentina",
+    "countryCode": "AR",
+    "countryName": "Argentina",
+    "continent": "South America",
+    "city": "Santa Fe",
+    "coordinates": [-60.7033,-31.6333 ]
+  },
+  {
+    "id": "7",
+    "name": "GREAT STONE industrial park",
+    "address": "Minsk, Belarus",
+    "countryCode": "BY",
+    "countryName": "Belarus",
+    "continent": "Europe",
+    "city": "Minsk",
+    "coordinates": [27.559, 53.9045]
+  },
+  {
+    "id": "8",
+    "name": "KAZAKISTAN Special Free Economic Zones Association",
+    "address": "Koschetau, Kazakhstan",
+    "countryCode": "KZ",
+    "countryName": "Kazakhstan",
+    "continent": "Asia",
+    "city": "Koschetau",
+    "coordinates": [69.4044, 53.2871]
+  },
+  {
+    "id": "9",
+    "name": "Anzali Free Zone Organization",
+    "address": "Chaparpord Paein, Fatehi Blvd, Iran",
+    "countryCode": "IR",
+    "countryName": "Iran",
+    "continent": "Asia",
+    "city": "Chaparpord Paein",
+    "coordinates": [53.00, 32.00]
+  },
+  {
+    "id": "10",
+    "name": "China(Hunan)Pilot Free Trade Zone",
+    "address": "Hunan, China",
+    "countryCode": "CN",
+    "countryName": "China",
+    "continent": "Asia",
+    "city": "Changsha",
+    "coordinates": [113.1219, 28.2278]
+  },
+{
+    "id": "11",
+    "name": "Zona Económica Especial Luanda | Bengo Special Economic Zone",
+    "address": "Luanda, Angola",
+    "countryCode": "AO",
+    "countryName": "Angola",
+    "continent": "Africa",
+    "city": "Luanda",
+    "coordinates": [13.2343, -8.839]
+  },
+  {
+    "id": "12",
+    "name": "MAEKONG INSTITUTE",
+    "address": "Khon Kaen, Thailand",
+    "countryCode": "TH",
+    "countryName": "Thailand",
+    "continent": "Asia",
+    "city": "Khon Kaen",
+    "coordinates": [102.8354, 16.4419]
+  },
+  {
+    "id": "13",
+    "name": "Suez Canal Economic Zone",
+    "address": "Ismailia, Egypt",
+    "countryCode": "EG",
+    "countryName": "Egypt",
+    "continent": "Africa",
+    "city": "Ismailia",
+    "coordinates": [32.2655, 30.5965]
+  },
+  {
+    "id": "14",
+    "name": "MYLER FREE ECONOMIC ZONE",
+    "address": "Yerevan, Armenia",
+    "countryCode": "AM",
+    "countryName": "Armenia",
+    "continent": "Asia",
+    "city": "Yerevan",
+    "coordinates": [44.5136, 40.1792]
+  },
+  {
+    "id": "15",
+    "name": "Codevi",
+    "address": "Port-au-Prince, Haiti",
+    "countryCode": "HT",
+    "countryName": "Haiti",
+    "continent": "North America",
+    "city": "Port-au-Prince",
+    "coordinates": [-72.2852, 18.5944]
+  },
+  {
+    "id": "16",
+    "name": "Phoenix",
+    "address": "Chennai, India",
+    "countryCode": "IN",
+    "countryName": "India",
+    "continent": "Asia",
+    "city": "Chennai",
+    "coordinates": [80.2707, 13.0827]
+  }
+]

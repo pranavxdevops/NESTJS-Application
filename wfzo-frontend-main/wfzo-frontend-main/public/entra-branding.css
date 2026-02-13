@@ -1,0 +1,492 @@
+/* WFZO - Microsoft Entra External ID Custom Branding */
+/* Color Palette from Figma Design System */
+/* Primary: #8B6914 (Gold 600) */
+/* Neutral: #4D4D4D (Grey 700) */
+/* Background: #FCFAF8 (Gold 25) */
+
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Source+Sans+Pro:wght@400;600;700&display=swap');
+
+body
+{
+    font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #FCFAF8 !important;
+    color: #2C2C2C;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+a,
+a:link
+{
+    color: #8B6914;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s ease;
+}
+
+a:hover
+{
+    color: #6B5010;
+    text-decoration: underline;
+}
+
+a:focus
+{
+    outline: 2px solid #8B6914;
+    outline-offset: 2px;
+    color: #8B6914;
+}
+
+a:focus:hover
+{
+    color: #6B5010;
+}
+
+a:active
+{
+    color: #4D3A0C;
+}
+
+.ext-background-image
+{
+    /* Background image holder */
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.ext-background-overlay
+{
+    /* Background overlay for opacity */
+    background-color: rgba(252, 250, 248, 0.95);
+}
+
+.ext-header
+{
+    /* Header at the top */
+    background-color: #2C2C2C !important;
+    padding: 24px 48px;
+    border-bottom: 1px solid #3A3A3A;
+}
+
+.ext-header-logo
+{
+    /* Header logo */
+    max-width: 180px;
+    height: auto;
+}
+
+.ext-middle
+{
+    /* Center container for lightbox template */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 100vh !important;
+    padding: 40px 20px !important;
+    flex: 1 !important;
+    width: 100% !important;
+}
+
+.ext-vertical-split-main-section
+{
+    /* Container for vertical split template */
+    display: flex;
+    min-height: 100vh;
+}
+
+.ext-vertical-split-background-image-container
+{
+    /* Background in vertical split template */
+    flex: 1;
+    background-size: cover;
+    background-position: center;
+}
+
+.ext-sign-in-box
+{
+    /* Sign in box container */
+    background: #FFFFFF !important;
+    border-radius: 20px !important;
+    border: 1px solid #E5DCC8 !important;
+    padding: 48px !important;
+    max-width: 480px !important;
+    width: 100% !important;
+    box-shadow: 0px 4px 24px rgba(0, 0, 0, 0.08) !important;
+    margin: auto !important;
+}
+
+.ext-banner-logo
+{
+    /* Banner logo inside sign-in box */
+    max-width: 160px;
+    height: auto;
+    margin-bottom: 32px;
+    display: block;
+}
+
+.ext-title
+{
+    /* Title text */
+    display: none !important;
+    font-family: 'Montserrat', sans-serif !important;
+    font-size: 32px !important;
+    font-weight: 800 !important;
+    line-height: 40px !important;
+    color: #2C2C2C !important;
+    margin-bottom: 12px !important;
+    margin-top: 0 !important;
+}
+
+.ext-subtitle
+{
+    /* Subtitle text */
+    display: none !important;
+    font-family: 'Source Sans Pro', sans-serif;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 24px;
+    color: #4D4D4D;
+    margin-bottom: 24px;
+}
+
+.ext-header-description
+{
+    /* Header description for B2C */
+    font-family: 'Source Sans Pro', sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
+    color: #6B6B6B;
+    margin-bottom: 24px;
+}
+
+.ext-error
+{
+    /* Error text */
+    color: #D92D20;
+    font-size: 14px;
+    font-weight: 600;
+    margin: 8px 0;
+    padding: 12px 16px;
+    background-color: #FEF3F2;
+    border-left: 4px solid #D92D20;
+    border-radius: 8px;
+}
+
+.ext-input.ext-text-box
+{
+    /* Text boxes */
+    font-family: 'Source Sans Pro', sans-serif;
+    font-size: 16px;
+    font-weight: 400;
+    padding: 12px 16px;
+    border: 1px solid #D0D0D0;
+    border-radius: 8px;
+    width: 100%;
+    background-color: #FFFFFF;
+    color: #2C2C2C;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.ext-input.ext-text-box.ext-has-error
+{
+    /* Text boxes with validation error */
+    border-color: #D92D20;
+    background-color: #FEF3F2;
+}
+
+.ext-input.ext-text-box:hover
+{
+    /* Text boxes on hover */
+    border-color: #8B6914;
+}
+
+.ext-input.ext-text-box:focus
+{
+    /* Text boxes with focus */
+    outline: none;
+    border-color: #8B6914;
+    box-shadow: 0 0 0 3px rgba(139, 105, 20, 0.1);
+}
+
+.ext-input.ext-text-box:focus:hover
+{
+    /* Text boxes with focus and hover */
+    border-color: #8B6914;
+}
+
+.ext-password-reset-links-container
+{
+    /* Password reset links container */
+    text-align: center;
+    margin: 16px 0;
+}
+
+.ext-button-field-container
+{
+    /* Buttons container */
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 12px !important;
+    margin-top: 24px !important;
+    justify-content: center !important;
+}
+
+.ext-button-item
+{
+    /* Button items */
+    width: auto !important;
+    flex: 0 0 auto !important;
+}
+
+.ext-button.ext-primary
+{
+    /* Primary buttons */
+    font-family: 'Source Sans Pro', sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    padding: 10px 20px !important;
+    background: linear-gradient(180deg, #8B6914 0%, #6B5010 100%) !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    width: auto !important;
+    min-width: 100px !important;
+    text-align: center !important;
+    box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.05) !important;
+}
+
+.ext-button.ext-primary:hover
+{
+    /* Primary buttons on hover */
+    background: linear-gradient(180deg, #6B5010 0%, #4D3A0C 100%);
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+.ext-button.ext-primary:focus
+{
+    /* Primary buttons with focus */
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(139, 105, 20, 0.3);
+}
+
+.ext-button.ext-primary:focus:hover
+{
+    /* Primary buttons with focus and hover */
+    background: linear-gradient(180deg, #6B5010 0%, #4D3A0C 100%);
+    box-shadow: 0 0 0 3px rgba(139, 105, 20, 0.3), 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.ext-button.ext-primary:active
+{
+    /* Primary buttons being clicked */
+    background: linear-gradient(180deg, #4D3A0C 0%, #3A2B09 100%);
+    transform: translateY(0);
+}
+
+.ext-button.ext-secondary
+{
+    /* Secondary buttons */
+    font-family: 'Source Sans Pro', sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    padding: 10px 20px !important;
+    background: #FFFFFF !important;
+    color: #8B6914 !important;
+    border: 1px solid #E5DCC8 !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    width: auto !important;
+    min-width: 100px !important;
+    text-align: center !important;
+}
+
+.ext-button.ext-secondary:hover
+{
+    /* Secondary buttons on hover */
+    background: #FFFBF5;
+    border-color: #8B6914;
+}
+
+.ext-button.ext-secondary:focus
+{
+    /* Secondary buttons with focus */
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(139, 105, 20, 0.1);
+    border-color: #8B6914;
+}
+
+.ext-button.ext-secondary:focus:hover
+{
+    /* Secondary buttons with focus and hover */
+    background: #FFFBF5;
+    border-color: #8B6914;
+    box-shadow: 0 0 0 3px rgba(139, 105, 20, 0.1);
+}
+
+.ext-button.ext-secondary:active
+{
+    /* Secondary buttons being clicked */
+    background: #F5F0E5;
+}
+
+.ext-boilerplate-text
+{
+    /* Custom message text at bottom */
+    font-family: 'Source Sans Pro', sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
+    color: #6B6B6B;
+    text-align: center;
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid #E5DCC8;
+}
+
+.ext-promoted-fed-cred-box
+{
+    /* Sign-in options text box */
+    background: #FFFBF5;
+    border: 1px solid #E5DCC8;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 16px 0;
+    font-size: 14px;
+    color: #4D4D4D;
+}
+
+.ext-footer
+{
+    /* Footer at bottom */
+    padding: 24px 48px !important;
+    background-color: #2C2C2C !important;
+    border-top: 1px solid #3A3A3A !important;
+    margin-top: auto !important;
+}
+
+.ext-footer.ext-has-background
+{
+    /* Footer with background */
+    background-color: #2C2C2C !important;
+}
+
+.ext-footer-links
+{
+    /* Footer links container */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+.ext-footer-content.ext-footer-item
+{
+    /* Links in footer */
+    font-family: 'Source Sans Pro', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #FFFFFF !important;
+}
+
+.ext-footer-content.ext-footer-item.ext-debug-item
+{
+    /* Debug details in footer */
+    color: #9B9B9B;
+    font-size: 12px;
+}
+
+/* Additional responsive styles */
+@media (max-width: 768px) {
+    .ext-sign-in-box {
+        padding: 32px 24px !important;
+        border-radius: 16px !important;
+    }
+    
+    .ext-title {
+        font-size: 24px !important;
+        line-height: 32px !important;
+    }
+    
+    .ext-header,
+    .ext-footer {
+        padding: 16px 24px !important;
+    }
+}
+
+/* Input and label fixes */
+.ext-input-wrapper {
+    margin-bottom: 16px !important;
+}
+
+label {
+    font-family: 'Source Sans Pro', sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #2C2C2C !important;
+    margin-bottom: 8px !important;
+    display: block !important;
+}
+
+/* Override Microsoft's default styles */
+#api,
+#api > div {
+    background-color: transparent !important;
+    min-height: 100vh !important;
+}
+
+.verifying-modal,
+.working {
+    background: rgba(252, 250, 248, 0.9) !important;
+}
+
+/* Fix for button container alignment */
+.buttons {
+    margin-top: 24px !important;
+}
+
+/* Fix heading margins */
+h1, h2, h3 {
+    margin-top: 0 !important;
+}
+
+/* Ensure full height container */
+html {
+    height: 100% !important;
+}
+
+body, #api {
+    min-height: 100vh !important;
+    height: auto !important;
+}
+
+/* Center the main content area */
+.page-wrapper,
+.main-container {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 100vh !important;
+}
+
+/* Accessibility improvements */
+*:focus-visible {
+    outline: 2px solid #8B6914 !important;
+    outline-offset: 2px !important;
+}
+
+/* Loading states */
+.ext-button.ext-primary:disabled,
+.ext-button.ext-secondary:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+}
